@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/pointlander/ultra/kmeans"
 )
 
 //go:embed iris.zip
@@ -33,6 +35,7 @@ func main() {
 	type Fisher struct {
 		Measures [4]float64
 		Label    string
+		Cluster  int
 	}
 	fisher := make([]Fisher, 0, 8)
 	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
@@ -66,7 +69,36 @@ func main() {
 			iris.Close()
 		}
 	}
+	input := make([][]float64, 0, 8)
 	for _, item := range fisher {
-		fmt.Println(item)
+		input = append(input, item.Measures[:])
+	}
+	meta := make([][]float64, len(fisher))
+	for i := range meta {
+		meta[i] = make([]float64, len(fisher))
+	}
+	for i := 0; i < 100; i++ {
+		clusters, _, err := kmeans.Kmeans(int64(i+1), input, 3, kmeans.SquaredEuclideanDistance, -1)
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < len(meta); i++ {
+			target := clusters[i]
+			for j, v := range clusters {
+				if v == target {
+					meta[i][j]++
+				}
+			}
+		}
+	}
+	clusters, _, err := kmeans.Kmeans(1, meta, 3, kmeans.SquaredEuclideanDistance, -1)
+	if err != nil {
+		panic(err)
+	}
+	for key, value := range clusters {
+		fisher[key].Cluster = value
+	}
+	for _, v := range fisher {
+		fmt.Println(v.Label, v.Cluster)
 	}
 }
