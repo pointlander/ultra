@@ -20,7 +20,8 @@ import (
 //go:embed iris.zip
 var Iris embed.FS
 
-func main() {
+// Cluster clusters the data
+func Cluster(k int) {
 	file, err := Iris.Open("iris.zip")
 	if err != nil {
 		panic(err)
@@ -79,7 +80,7 @@ func main() {
 		meta[i] = make([]float64, len(fisher))
 	}
 	for i := 0; i < 100; i++ {
-		clusters, _, err := kmeans.Kmeans(int64(i+1), input, 3, kmeans.SquaredEuclideanDistance, -1)
+		clusters, _, err := kmeans.Kmeans(int64(i+1), input, k, kmeans.SquaredEuclideanDistance, -1)
 		if err != nil {
 			panic(err)
 		}
@@ -92,27 +93,27 @@ func main() {
 			}
 		}
 	}
-	clusters, _, err := kmeans.Kmeans(1, meta, 3, kmeans.SquaredEuclideanDistance, -1)
+	clusters, _, err := kmeans.Kmeans(1, meta, k, kmeans.SquaredEuclideanDistance, -1)
 	if err != nil {
 		panic(err)
 	}
 	for key, value := range clusters {
 		fisher[key].Cluster = value
 	}
-	sum, counts := [3][4]float64{}, [3]float64{}
+	sum, counts := make([][4]float64, k), make([]float64, k)
 	for _, v := range fisher {
 		for i, vv := range v.Measures {
 			sum[v.Cluster][i] += vv
 		}
 		counts[v.Cluster]++
-		fmt.Println(v.Label, v.Cluster)
+		//fmt.Println(v.Label, v.Cluster)
 	}
 	for i := range sum {
 		for j := range sum[i] {
 			sum[i][j] /= counts[i]
 		}
 	}
-	stddev := [3][4]float64{}
+	stddev := make([][4]float64, k)
 	for _, v := range fisher {
 		for i, vv := range v.Measures {
 			diff := sum[v.Cluster][i] - vv
@@ -124,7 +125,7 @@ func main() {
 			stddev[i][j] = math.Sqrt(stddev[i][j] / counts[i])
 		}
 	}
-	outliers := [3][4]int{}
+	outliers := make([][4]int, k)
 	for _, v := range fisher {
 		for j, vv := range v.Measures {
 			if math.Abs(vv-sum[v.Cluster][j]) > 3*stddev[v.Cluster][j] {
@@ -133,4 +134,18 @@ func main() {
 		}
 	}
 	fmt.Println(outliers)
+	total := 0
+	for _, v := range outliers {
+		for _, vv := range v {
+			total += vv
+		}
+	}
+	fmt.Println("total", total)
+}
+
+func main() {
+	for i := 1; i < 8; i++ {
+		fmt.Println("Cluster", i)
+		Cluster(i)
+	}
 }
