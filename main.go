@@ -11,6 +11,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 
 	"github.com/pointlander/ultra/kmeans"
@@ -98,7 +99,30 @@ func main() {
 	for key, value := range clusters {
 		fisher[key].Cluster = value
 	}
+	sum, counts := [3][4]float64{}, [3]float64{}
 	for _, v := range fisher {
+		for i, vv := range v.Measures {
+			sum[v.Cluster][i] += vv
+		}
+		counts[v.Cluster]++
 		fmt.Println(v.Label, v.Cluster)
 	}
+	for i := range sum {
+		for j := range sum[i] {
+			sum[i][j] /= counts[i]
+		}
+	}
+	stddev := [3][4]float64{}
+	for _, v := range fisher {
+		for i, vv := range v.Measures {
+			diff := sum[v.Cluster][i] - vv
+			stddev[v.Cluster][i] += diff * diff
+		}
+	}
+	for i := range stddev {
+		for j := range stddev[i] {
+			stddev[i][j] = math.Sqrt(stddev[i][j])
+		}
+	}
+	fmt.Println(stddev)
 }
