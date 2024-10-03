@@ -121,8 +121,16 @@ func main() {
 	}
 	for i := range stddev {
 		for j := range stddev[i] {
-			stddev[i][j] = math.Sqrt(stddev[i][j])
+			stddev[i][j] = math.Sqrt(stddev[i][j] / counts[i])
 		}
 	}
-	fmt.Println(stddev)
+	outliers := [3][4]int{}
+	for _, v := range fisher {
+		for j, vv := range v.Measures {
+			if math.Abs(vv-sum[v.Cluster][j]) > 3*stddev[v.Cluster][j] {
+				outliers[v.Cluster][j]++
+			}
+		}
+	}
+	fmt.Println(outliers)
 }
