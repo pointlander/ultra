@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"strconv"
 
 	"github.com/pointlander/ultra/kmeans"
@@ -20,8 +21,15 @@ import (
 //go:embed iris.zip
 var Iris embed.FS
 
-// Cluster clusters the data
-func Cluster(k int) {
+// Fisher is the fisher iris data
+type Fisher struct {
+	Measures [4]float64
+	Label    string
+	Cluster  int
+}
+
+// Load loads the iris data set
+func Load() []Fisher {
 	file, err := Iris.Open("iris.zip")
 	if err != nil {
 		panic(err)
@@ -32,13 +40,7 @@ func Cluster(k int) {
 	if err != nil {
 		panic(err)
 	}
-	_ = data
 
-	type Fisher struct {
-		Measures [4]float64
-		Label    string
-		Cluster  int
-	}
 	fisher := make([]Fisher, 0, 8)
 	reader, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
@@ -71,6 +73,12 @@ func Cluster(k int) {
 			iris.Close()
 		}
 	}
+	return fisher
+}
+
+// Cluster clusters the data
+func Cluster(k int) {
+	fisher := Load()
 	input := make([][]float64, 0, 8)
 	for _, item := range fisher {
 		input = append(input, item.Measures[:])
@@ -148,4 +156,14 @@ func main() {
 		fmt.Println("Cluster", i)
 		Cluster(i)
 	}
+
+	rng := rand.New(rand.NewSource(1))
+	fisher := Load()
+	input := NewMatrix(4, 150)
+	for i := range fisher {
+		for _, value := range fisher[i].Measures {
+			input.Data = append(input.Data, complex(value, 0))
+		}
+	}
+	Process(rng, input)
 }
