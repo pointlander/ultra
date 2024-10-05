@@ -150,7 +150,7 @@ type Sample struct {
 }
 
 // Process processes the samples' the probability distribution
-func Process(rng *rand.Rand, input Matrix) {
+func Process(rng *rand.Rand, input Matrix, fisher []Fisher) {
 	projections := make([]RandomMatrix, Scale)
 	for i := range projections {
 		seed := rng.Int63()
@@ -215,5 +215,8 @@ func Process(rng *rand.Rand, input Matrix) {
 			variances[j] += diff * diff
 		}
 	}
-	fmt.Println(variances)
+
+	for i, item := range fisher {
+		fmt.Println(item.Label, variances[i])
+	}
 }

@@ -165,5 +165,5 @@ func main() {
 			input.Data = append(input.Data, complex(value, 0))
 		}
 	}
-	Process(rng, input)
+	Process(rng, input, fisher)
 }
