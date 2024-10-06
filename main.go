@@ -23,7 +23,7 @@ var Iris embed.FS
 
 // Fisher is the fisher iris data
 type Fisher struct {
-	Measures [4]float64
+	Measures []float64
 	Label    string
 	Cluster  int
 }
@@ -66,7 +66,8 @@ func Load() []Fisher {
 			}
 			for _, item := range data {
 				record := Fisher{
-					Label: item[4],
+					Measures: make([]float64, 4),
+					Label:    item[4],
 				}
 				for i := range item[:4] {
 					f, err := strconv.ParseFloat(item[i], 64)
@@ -133,8 +134,8 @@ func Cluster(k int, variances []float64) []int {
 	fisher := Load()
 	input := make([][]float64, 0, 8)
 	for i, item := range fisher {
-		input = append(input, item.Measures[:])
-		input[i] = append(input[i], variances[i])
+		item.Measures = append(item.Measures, variances[i])
+		input = append(input, item.Measures)
 	}
 	meta := make([][]float64, len(fisher))
 	for i := range meta {
