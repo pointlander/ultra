@@ -130,11 +130,12 @@ func Entropy(fisher []Fisher, c int, clusters []int) {
 }
 
 // Cluster clusters the data
-func Cluster(k int, variances []float64) []int {
+func Cluster(k int, variances, variances1 []float64) []int {
 	fisher := Load()
 	input := make([][]float64, 0, 8)
 	for i, item := range fisher {
-		item.Measures = append(item.Measures, variances[i])
+		item.Measures = []float64{variances[i], variances1[i]}
+		//item.Measures[1] = variances1[i]
 		input = append(input, item.Measures)
 	}
 	meta := make([][]float64, len(fisher))
@@ -216,10 +217,24 @@ func main() {
 		}
 	}
 	variances := Process(rng, input, fisher)
+	for i := range fisher {
+		fisher[i].Measures = append(fisher[i].Measures, variances[i])
+	}
+	input = NewMatrix(4, 150)
+	for i := range fisher {
+		for _, value := range fisher[i].Measures {
+			input.Data = append(input.Data, complex(value, 0))
+		}
+	}
+	variances1 := Process(rng, input, fisher)
+
+	for i := range fisher {
+		fmt.Println(fisher[i].Label, variances[i], variances1[i])
+	}
 
 	for i := 1; i < 8; i++ {
 		fmt.Println("Cluster", i)
-		clusters := Cluster(i, variances)
+		clusters := Cluster(i, variances, variances1)
 		Entropy(fisher, i, clusters)
 	}
 }
