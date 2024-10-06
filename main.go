@@ -28,6 +28,13 @@ type Fisher struct {
 	Cluster  int
 }
 
+// Labels maps iris labels to ints
+var Labels = map[string]int{
+	"Iris-setosa":     0,
+	"Iris-versicolor": 1,
+	"Iris-virginica":  2,
+}
+
 // Load loads the iris data set
 func Load() []Fisher {
 	file, err := Iris.Open("iris.zip")
@@ -76,12 +83,58 @@ func Load() []Fisher {
 	return fisher
 }
 
+// Entropy calculates the entropy of the clustering
+func Entropy(fisher []Fisher, c int, clusters []int) {
+	ab := make([][]float64, 3)
+	for i := range ab {
+		ab[i] = make([]float64, c)
+	}
+	ba := make([][]float64, c)
+	for i := range ba {
+		ba[i] = make([]float64, 3)
+	}
+	for i := range fisher {
+		a := int(Labels[fisher[i].Label])
+		b := clusters[i]
+		ab[a][b]++
+		ba[b][a]++
+	}
+	entropy := 0.0
+	for i := 0; i < c; i++ {
+		entropy += (1.0 / float64(c)) * math.Log(1.0/float64(c))
+	}
+	fmt.Println(-entropy, -(1.0/float64(c))*math.Log(1.0/float64(c)))
+	for i := range ab {
+		entropy := 0.0
+		for _, value := range ab[i] {
+			if value > 0 {
+				p := value / 150
+				entropy += p * math.Log(p)
+			}
+		}
+		entropy = -entropy
+		fmt.Println("ab", i, entropy)
+	}
+	for i := range ba {
+		entropy := 0.0
+		for _, value := range ba[i] {
+			if value > 0 {
+				p := value / 150
+				entropy += p * math.Log(p)
+			}
+		}
+		entropy = -entropy
+		fmt.Println("ba", i, entropy)
+	}
+}
+
 // Cluster clusters the data
-func Cluster(k int) {
+func Cluster(k int, variances []float64) []int {
 	fisher := Load()
 	input := make([][]float64, 0, 8)
-	for _, item := range fisher {
+	for i, item := range fisher {
 		input = append(input, item.Measures[:])
+		input[i] = append(input[i], variances[i])
 	}
 	meta := make([][]float64, len(fisher))
 	for i := range meta {
@@ -149,14 +202,10 @@ func Cluster(k int) {
 		}
 	}
 	fmt.Println("total", total)
+	return clusters
 }
 
 func main() {
-	for i := 1; i < 8; i++ {
-		fmt.Println("Cluster", i)
-		Cluster(i)
-	}
-
 	rng := rand.New(rand.NewSource(1))
 	fisher := Load()
 	input := NewMatrix(4, 150)
@@ -165,5 +214,11 @@ func main() {
 			input.Data = append(input.Data, complex(value, 0))
 		}
 	}
-	Process(rng, input, fisher)
+	variances := Process(rng, input, fisher)
+
+	for i := 1; i < 8; i++ {
+		fmt.Println("Cluster", i)
+		clusters := Cluster(i, variances)
+		Entropy(fisher, i, clusters)
+	}
 }
