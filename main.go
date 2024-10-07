@@ -215,7 +215,7 @@ func main() {
 	fisher := Load()
 	vars := make([][]float64, 0, 8)
 	for i := 0; i < 2; i++ {
-		input := NewMatrix(4, 150)
+		input := NewMatrix(4+i, 150)
 		for i := range fisher {
 			for _, value := range fisher[i].Measures {
 				input.Data = append(input.Data, complex(value, 0))

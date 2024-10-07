@@ -157,7 +157,7 @@ func Process(rng *rand.Rand, input Matrix, fisher []Fisher) []float64 {
 		if seed == 0 {
 			seed = 1
 		}
-		projections[i] = NewRandomMatrix(Input, Input, seed)
+		projections[i] = NewRandomMatrix(input.Cols, input.Cols, seed)
 	}
 	index := 0
 	samples := make([]Sample, Samples)
