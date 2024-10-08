@@ -211,6 +211,53 @@ func Cluster(k int, vars [][]float64) []int {
 	return clusters
 }
 
+func Split(fisher []Fisher) (float64, int) {
+	sort.Slice(fisher, func(i, j int) bool {
+		return fisher[i].Measures[4] < fisher[j].Measures[4]
+	})
+	sum := 0.0
+	for _, item := range fisher {
+		sum += item.Measures[4]
+	}
+	average := sum / float64(len(fisher))
+	variance := 0.0
+	for _, item := range fisher {
+		diff := item.Measures[4] - average
+		variance += diff * diff
+	}
+	variance /= float64(len(fisher))
+	max, index := 0.0, 0
+	for i := 1; i < len(fisher)-1; i++ {
+		sumA, sumB := 0.0, 0.0
+		countA, countB := 0.0, 0.0
+		for _, item := range fisher[:i] {
+			sumA += item.Measures[4]
+			countA++
+		}
+		for _, item := range fisher[i:] {
+			sumB += item.Measures[4]
+			countB++
+		}
+		averageA := sumA / countA
+		averageB := sumB / countB
+		varianceA, varianceB := 0.0, 0.0
+		for _, item := range fisher[:i] {
+			diff := item.Measures[4] - averageA
+			varianceA += diff * diff
+		}
+		for _, item := range fisher[i:] {
+			diff := item.Measures[4] - averageB
+			varianceB += diff * diff
+		}
+		varianceA /= countA
+		varianceB /= countB
+		if diff := variance - (varianceA + varianceB); diff > max {
+			max, index = diff, i
+		}
+	}
+	return max, index
+}
+
 func main() {
 	rng := rand.New(rand.NewSource(1))
 	fisher := Load()
@@ -235,55 +282,9 @@ func main() {
 		Entropy(fisher, i, clusters)
 	}
 
-	split := func(fisher []Fisher) (float64, int) {
-		sort.Slice(fisher, func(i, j int) bool {
-			return fisher[i].Measures[4] < fisher[j].Measures[4]
-		})
-		sum := 0.0
-		for _, item := range fisher {
-			sum += item.Measures[4]
-		}
-		average := sum / float64(len(fisher))
-		variance := 0.0
-		for _, item := range fisher {
-			diff := item.Measures[4] - average
-			variance += diff * diff
-		}
-		variance /= float64(len(fisher))
-		max, index := 0.0, 0
-		for i := 1; i < len(fisher)-1; i++ {
-			sumA, sumB := 0.0, 0.0
-			countA, countB := 0.0, 0.0
-			for _, item := range fisher[:i] {
-				sumA += item.Measures[4]
-				countA++
-			}
-			for _, item := range fisher[i:] {
-				sumB += item.Measures[4]
-				countB++
-			}
-			averageA := sumA / countA
-			averageB := sumB / countB
-			varianceA, varianceB := 0.0, 0.0
-			for _, item := range fisher[:i] {
-				diff := item.Measures[4] - averageA
-				varianceA += diff * diff
-			}
-			for _, item := range fisher[i:] {
-				diff := item.Measures[4] - averageB
-				varianceB += diff * diff
-			}
-			varianceA /= countA
-			varianceB /= countB
-			if diff := variance - (varianceA + varianceB); diff > max {
-				max, index = diff, i
-			}
-		}
-		return max, index
-	}
-	max, index := split(fisher)
-	max1, index1 := split(fisher[:index])
-	max2, index2 := split(fisher[index:])
+	max, index := Split(fisher)
+	max1, index1 := Split(fisher[:index])
+	max2, index2 := Split(fisher[index:])
 	for i, item := range fisher {
 		fmt.Println(i, item.Label, item.Measures[4])
 	}
