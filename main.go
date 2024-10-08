@@ -27,6 +27,7 @@ type Fisher struct {
 	Measures []float64
 	Label    string
 	Cluster  int
+	Index    int
 }
 
 // Labels maps iris labels to ints
@@ -65,10 +66,11 @@ func Load() []Fisher {
 			if err != nil {
 				panic(err)
 			}
-			for _, item := range data {
+			for i, item := range data {
 				record := Fisher{
 					Measures: make([]float64, 4),
 					Label:    item[4],
+					Index:    i,
 				}
 				for i := range item[:4] {
 					f, err := strconv.ParseFloat(item[i], 64)
@@ -211,18 +213,18 @@ func Cluster(k int, vars [][]float64) []int {
 	return clusters
 }
 
-func Split(fisher []Fisher) (float64, int) {
+func Split(fisher []Fisher, col int) (float64, int) {
 	sort.Slice(fisher, func(i, j int) bool {
-		return fisher[i].Measures[4] < fisher[j].Measures[4]
+		return fisher[i].Measures[col] < fisher[j].Measures[col]
 	})
 	sum := 0.0
 	for _, item := range fisher {
-		sum += item.Measures[4]
+		sum += item.Measures[col]
 	}
 	average := sum / float64(len(fisher))
 	variance := 0.0
 	for _, item := range fisher {
-		diff := item.Measures[4] - average
+		diff := item.Measures[col] - average
 		variance += diff * diff
 	}
 	variance /= float64(len(fisher))
@@ -231,22 +233,22 @@ func Split(fisher []Fisher) (float64, int) {
 		sumA, sumB := 0.0, 0.0
 		countA, countB := 0.0, 0.0
 		for _, item := range fisher[:i] {
-			sumA += item.Measures[4]
+			sumA += item.Measures[col]
 			countA++
 		}
 		for _, item := range fisher[i:] {
-			sumB += item.Measures[4]
+			sumB += item.Measures[col]
 			countB++
 		}
 		averageA := sumA / countA
 		averageB := sumB / countB
 		varianceA, varianceB := 0.0, 0.0
 		for _, item := range fisher[:i] {
-			diff := item.Measures[4] - averageA
+			diff := item.Measures[col] - averageA
 			varianceA += diff * diff
 		}
 		for _, item := range fisher[i:] {
-			diff := item.Measures[4] - averageB
+			diff := item.Measures[col] - averageB
 			varianceB += diff * diff
 		}
 		varianceA /= countA
@@ -262,7 +264,7 @@ func main() {
 	rng := rand.New(rand.NewSource(1))
 	fisher := Load()
 	vars := make([][]float64, 0, 8)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 4; i++ {
 		input := NewMatrix(4+i, 150)
 		for i := range fisher {
 			for _, value := range fisher[i].Measures {
@@ -282,12 +284,55 @@ func main() {
 		Entropy(fisher, i, clusters)
 	}
 
-	max, index := Split(fisher)
-	max1, index1 := Split(fisher[:index])
-	max2, index2 := Split(fisher[index:])
-	for i, item := range fisher {
-		fmt.Println(i, item.Label, item.Measures[4])
+	cluster := func(fisher []Fisher, col int) []int {
+		clusters := make([]int, len(fisher))
+		_, index := Split(fisher, col)
+		max1, index1 := Split(fisher[:index], col)
+		max2, index2 := Split(fisher[index:], col)
+		if max1 > max2 {
+			for i, item := range fisher {
+				if i < index1 {
+					clusters[item.Index] = 0
+				} else if i < index {
+					clusters[item.Index] = 1
+				} else {
+					clusters[item.Index] = 2
+				}
+			}
+		} else {
+			for i, item := range fisher {
+				if i < index {
+					clusters[item.Index] = 0
+				} else if i < index+index2 {
+					clusters[item.Index] = 1
+				} else {
+					clusters[item.Index] = 2
+				}
+			}
+		}
+		return clusters
 	}
-	fmt.Println(index, index1, index2)
-	fmt.Println(max, max1, max2)
+	meta := make([][]float64, len(fisher))
+	for i := range meta {
+		meta[i] = make([]float64, len(fisher))
+	}
+	for i := 4; i < 8; i++ {
+		clusters := cluster(fisher, i)
+		for i := 0; i < len(meta); i++ {
+			target := clusters[i]
+			for j, v := range clusters {
+				if v == target {
+					meta[i][j]++
+				}
+			}
+		}
+	}
+	clusters, _, err := kmeans.Kmeans(1, meta, 3, kmeans.SquaredEuclideanDistance, -1)
+	if err != nil {
+		panic(err)
+	}
+	fisher = Load()
+	for i, v := range clusters {
+		fmt.Println(fisher[i].Label, v)
+	}
 }
