@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"embed"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -260,11 +261,11 @@ func Split(fisher []Fisher, col int) (float64, int) {
 	return max, index
 }
 
-func main() {
+// Variance cluster is variance based clustering
+func VarianceCluster() {
 	rng := rand.New(rand.NewSource(1))
 	fisher := Load()
-	vars := make([][]float64, 0, 8)
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 33; i++ {
 		input := NewMatrix(4+i, 150)
 		for i := range fisher {
 			for _, value := range fisher[i].Measures {
@@ -275,13 +276,6 @@ func main() {
 		for i := range fisher {
 			fisher[i].Measures = append(fisher[i].Measures, variances[i])
 		}
-		vars = append(vars, variances)
-	}
-
-	for i := 1; i < 8; i++ {
-		fmt.Println("Cluster", i)
-		clusters := Cluster(i, vars)
-		Entropy(fisher, i, clusters)
 	}
 
 	cluster := func(fisher []Fisher, col int) []int {
@@ -316,7 +310,7 @@ func main() {
 	for i := range meta {
 		meta[i] = make([]float64, len(fisher))
 	}
-	for i := 4; i < 8; i++ {
+	for i := 4; i < 37; i++ {
 		clusters := cluster(fisher, i)
 		for i := 0; i < len(meta); i++ {
 			target := clusters[i]
@@ -336,4 +330,41 @@ func main() {
 		fmt.Println(fisher[i].Label, v)
 	}
 	Entropy(fisher, 3, clusters)
+}
+
+var (
+	// FlagVariance variance mode
+	FlagVariance = flag.Bool("variance", false, "variance mode")
+)
+
+func main() {
+	flag.Parse()
+
+	if *FlagVariance {
+		VarianceCluster()
+		return
+	}
+
+	rng := rand.New(rand.NewSource(1))
+	fisher := Load()
+	vars := make([][]float64, 0, 8)
+	for i := 0; i < 4; i++ {
+		input := NewMatrix(4+i, 150)
+		for i := range fisher {
+			for _, value := range fisher[i].Measures {
+				input.Data = append(input.Data, complex(value, 0))
+			}
+		}
+		variances := Process(rng, input, fisher)
+		for i := range fisher {
+			fisher[i].Measures = append(fisher[i].Measures, variances[i])
+		}
+		vars = append(vars, variances)
+	}
+
+	for i := 1; i < 8; i++ {
+		fmt.Println("Cluster", i)
+		clusters := Cluster(i, vars)
+		Entropy(fisher, i, clusters)
+	}
 }
