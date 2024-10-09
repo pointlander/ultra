@@ -335,4 +335,5 @@ func main() {
 	for i, v := range clusters {
 		fmt.Println(fisher[i].Label, v)
 	}
+	Entropy(fisher, 3, clusters)
 }
